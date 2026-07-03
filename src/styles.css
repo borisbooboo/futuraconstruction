@@ -1,0 +1,178 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@source "../src";
+
+@custom-variant dark (&:is(.dark *));
+@theme inline {
+  --font-display: "Archivo", system-ui, sans-serif;
+  --font-sans: "DM Sans", system-ui, sans-serif;
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-brand-blue: var(--brand-blue);
+  --color-brand-red: var(--brand-red);
+  --color-brand-blue-deep: var(--brand-blue-deep);
+}
+
+:root {
+  --radius: 0.5rem;
+  /* Futura brand */
+  --brand-blue: oklch(0.32 0.14 265);
+  --brand-blue-deep: oklch(0.22 0.10 265);
+  --brand-red: oklch(0.50 0.20 25);
+
+  --background: oklch(0.99 0.003 250);
+  --foreground: oklch(0.18 0.03 265);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.18 0.03 265);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.18 0.03 265);
+  --primary: var(--brand-blue);
+  --primary-foreground: oklch(0.99 0.003 250);
+  --secondary: oklch(0.96 0.008 250);
+  --secondary-foreground: var(--brand-blue);
+  --muted: oklch(0.96 0.008 250);
+  --muted-foreground: oklch(0.48 0.02 265);
+  --accent: var(--brand-red);
+  --accent-foreground: oklch(0.99 0.003 250);
+  --destructive: oklch(0.55 0.22 25);
+  --destructive-foreground: oklch(0.99 0.003 250);
+  --border: oklch(0.91 0.01 255);
+  --input: oklch(0.93 0.01 255);
+  --ring: var(--brand-blue);
+}
+
+.dark {
+  --background: oklch(0.14 0.02 265);
+  --foreground: oklch(0.97 0.005 250);
+  --card: oklch(0.19 0.03 265);
+  --card-foreground: oklch(0.97 0.005 250);
+  --popover: oklch(0.19 0.03 265);
+  --popover-foreground: oklch(0.97 0.005 250);
+  --primary: oklch(0.65 0.15 260);
+  --primary-foreground: oklch(0.14 0.02 265);
+  --secondary: oklch(0.24 0.03 265);
+  --secondary-foreground: oklch(0.97 0.005 250);
+  --muted: oklch(0.24 0.03 265);
+  --muted-foreground: oklch(0.70 0.02 260);
+  --accent: var(--brand-red);
+  --accent-foreground: oklch(0.99 0.003 250);
+  --destructive: oklch(0.60 0.22 25);
+  --destructive-foreground: oklch(0.99 0.003 250);
+  --border: oklch(1 0 0 / 12%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.65 0.15 260);
+}
+
+@layer base {
+  * { border-color: var(--color-border); }
+  html { scroll-behavior: smooth; }
+  body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+  h1, h2, h3, h4, h5 {
+    font-family: var(--font-display);
+    letter-spacing: -0.02em;
+  }
+}
+
+@layer utilities {
+  .container-x { @apply mx-auto w-full max-w-7xl px-5 sm:px-8; }
+  .brand-gradient {
+    background-image: linear-gradient(135deg, var(--brand-blue-deep) 0%, var(--brand-blue) 60%, oklch(0.40 0.16 265) 100%);
+  }
+  .text-balance { text-wrap: balance; }
+}
+
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-up { animation: fade-up 0.7s cubic-bezier(0.16, 1, 0.3, 1) both; }
+
+.dark .admin-shell {
+  background: #0f172a !important;
+  color: #f8fafc !important;
+}
+
+.dark .admin-shell header,
+.dark .admin-shell section,
+.dark .admin-shell .bg-white,
+.dark .admin-shell .bg-slate-50 {
+  background-color: #111827 !important;
+  color: #f8fafc !important;
+}
+
+.dark .admin-shell .bg-blue-50 {
+  background-color: #172554 !important;
+  color: #dbeafe !important;
+}
+
+.dark .admin-shell .bg-red-50 {
+  background-color: #450a0a !important;
+  color: #fecaca !important;
+}
+
+.dark .admin-shell .border-slate-200,
+.dark .admin-shell .border-slate-200\/80,
+.dark .admin-shell .border-blue-100,
+.dark .admin-shell .border-red-200,
+.dark .admin-shell .border-emerald-100 {
+  border-color: rgba(148, 163, 184, 0.28) !important;
+}
+
+.dark .admin-shell .text-slate-950,
+.dark .admin-shell .text-slate-900,
+.dark .admin-shell .text-slate-800,
+.dark .admin-shell .text-slate-700,
+.dark .admin-shell .text-slate-600 {
+  color: #f8fafc !important;
+}
+
+.dark .admin-shell .text-slate-500,
+.dark .admin-shell .text-slate-400 {
+  color: #cbd5e1 !important;
+}
+
+.dark .admin-shell input,
+.dark .admin-shell textarea,
+.dark .admin-shell select {
+  background-color: #0f172a !important;
+  border-color: rgba(148, 163, 184, 0.35) !important;
+  color: #f8fafc !important;
+}
+
+.dark .admin-shell input::placeholder,
+.dark .admin-shell textarea::placeholder {
+  color: #94a3b8 !important;
+}
+
+.dark .admin-shell .shadow-sm,
+.dark .admin-shell .shadow-lg,
+.dark .admin-shell .shadow-2xl {
+  box-shadow: 0 18px 45px rgba(0, 0, 0, 0.28) !important;
+}
