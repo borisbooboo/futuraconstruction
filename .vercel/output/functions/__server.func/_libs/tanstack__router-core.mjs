@@ -92,8 +92,9 @@ function isModuleNotFoundError(error) {
 function isPromise(value) {
   return Boolean(value && typeof value === "object" && typeof value.then === "function");
 }
+const PATH_UNSAFE_RE = /[\x00-\x1f\x7f"<>`{}]/g;
 function sanitizePathSegment(segment) {
-  return segment.replace(/[\x00-\x1f\x7f]/g, "");
+  return segment.replace(PATH_UNSAFE_RE, (ch) => "%" + ch.charCodeAt(0).toString(16).toUpperCase().padStart(2, "0"));
 }
 function decodeSegment(segment) {
   let decoded;
@@ -2049,13 +2050,12 @@ var RouterCore = class {
   */
   constructor(options, getStoreConfig) {
     this.tempLocationKey = `${Math.round(Math.random() * 1e7)}`;
-    this.resetNextScroll = true;
+    this._scroll = { next: true };
     this.shouldViewTransition = void 0;
     this.isViewTransitionTypesSupported = void 0;
     this.subscribers = /* @__PURE__ */ new Set();
-    this.isScrollRestoring = false;
-    this.isScrollRestorationSetup = false;
     this.routeBranchCache = /* @__PURE__ */ new WeakMap();
+    this.lightweightCache = /* @__PURE__ */ new WeakMap();
     this.startTransition = (fn) => fn();
     this.update = (newOptions) => {
       const prevOptions = this.options;
@@ -2394,7 +2394,7 @@ var RouterCore = class {
         historyAction = next.replace ? "REPLACE" : "PUSH";
         this.history[historyAction === "REPLACE" ? "replace" : "push"](nextHistory.publicHref, nextHistory.state, { ignoreBlocker });
       }
-      this.resetNextScroll = next.resetScroll ?? true;
+      this._scroll.next = next.resetScroll ?? true;
       if (!this.history.subscribers.size) this.load(historyAction ? { action: { type: historyAction } } : void 0);
       return this.commitLocationPromise;
     };
@@ -2420,7 +2420,7 @@ var RouterCore = class {
         hashScrollIntoView,
         ignoreBlocker
       });
-      Promise.resolve().then(() => {
+      queueMicrotask(() => {
         if (this.pendingBuiltLocation === location) this.pendingBuiltLocation = void 0;
       });
       return commitPromise;
@@ -2444,7 +2444,7 @@ var RouterCore = class {
         }
         const reloadHref = !hrefIsUrl && publicHref ? publicHref : href;
         if (isDangerousProtocol(reloadHref, this.protocolAllowlist)) {
-          return Promise.resolve();
+          return;
         }
         if (!rest.ignoreBlocker) {
           const blockers = this.history.getBlockers?.() ?? [];
@@ -2453,12 +2453,12 @@ var RouterCore = class {
               currentLocation: this.latestLocation,
               nextLocation: this.latestLocation,
               action: "PUSH"
-            })) return Promise.resolve();
+            })) return;
           }
         }
         if (rest.replace) window.location.replace(reloadHref);
         else window.location.href = reloadHref;
-        return Promise.resolve();
+        return;
       }
       return this.buildAndCommitLocation({
         ...rest,
@@ -2966,6 +2966,9 @@ var RouterCore = class {
   * operations like AbortController, ControlledPromise, loaderDeps, and full match objects.
   */
   matchRoutesLightweight(location) {
+    const lastStateMatchId = last(this.stores.matchesId.get());
+    const cached = this.lightweightCache.get(location);
+    if (cached && cached[0] === lastStateMatchId) return cached[1];
     const { matchedRoutes, routeParams } = this.getMatchedRoutes(location.pathname);
     const lastRoute = last(matchedRoutes);
     const accumulatedSearch = { ...location.search };
@@ -2973,7 +2976,6 @@ var RouterCore = class {
       Object.assign(accumulatedSearch, validateSearch(route.options.validateSearch, accumulatedSearch));
     } catch {
     }
-    const lastStateMatchId = last(this.stores.matchesId.get());
     const lastStateMatch = lastStateMatchId && this.stores.matchStores.get(lastStateMatchId)?.get();
     const canReuseParams = lastStateMatch && lastStateMatch.routeId === lastRoute.id && lastStateMatch.pathname === location.pathname;
     let params;
@@ -2986,12 +2988,14 @@ var RouterCore = class {
       }
       params = strictParams;
     }
-    return {
+    const result = {
       matchedRoutes,
       fullPath: lastRoute.fullPath,
       search: accumulatedSearch,
       params
     };
+    this.lightweightCache.set(location, [lastStateMatchId, result]);
+    return result;
   }
 };
 var SearchParamError = class extends Error {
@@ -3041,62 +3045,68 @@ function applySearchMiddleware({ search, dest, destRoutes, _includeValidateSearc
   return buildMiddlewareChain(destRoutes)(search, dest, _includeValidateSearch ?? false);
 }
 function buildMiddlewareChain(destRoutes) {
-  const context = {
-    dest: null,
-    _includeValidateSearch: false,
-    middlewares: []
-  };
+  let dest;
+  let includeValidateSearch;
+  const middlewares = [];
   for (const route of destRoutes) {
-    if ("search" in route.options) {
-      if (route.options.search?.middlewares) context.middlewares.push(...route.options.search.middlewares);
-    } else if (route.options.preSearchFilters || route.options.postSearchFilters) {
+    const routeOptions = route.options;
+    if ("search" in routeOptions) {
+      if (routeOptions.search?.middlewares) middlewares.push(...routeOptions.search.middlewares);
+    } else if (routeOptions.preSearchFilters || routeOptions.postSearchFilters) {
       const legacyMiddleware = ({ search, next }) => {
-        let nextSearch = search;
-        if ("preSearchFilters" in route.options && route.options.preSearchFilters) nextSearch = route.options.preSearchFilters.reduce((prev, next2) => next2(prev), search);
-        const result = next(nextSearch);
-        if ("postSearchFilters" in route.options && route.options.postSearchFilters) return route.options.postSearchFilters.reduce((prev, next2) => next2(prev), result);
-        return result;
+        const result = next(routeOptions.preSearchFilters ? routeOptions.preSearchFilters.reduce((prev, next2) => next2(prev), search) : search);
+        return routeOptions.postSearchFilters ? routeOptions.postSearchFilters.reduce((prev, next2) => next2(prev), result) : result;
       };
-      context.middlewares.push(legacyMiddleware);
+      middlewares.push(legacyMiddleware);
     }
-    if (route.options.validateSearch) {
-      const validate = ({ search, next }) => {
+    const routeValidateSearch = routeOptions.validateSearch;
+    if (routeValidateSearch) {
+      const validate = ({ search, next, meta }) => {
         const result = next(search);
-        if (!context._includeValidateSearch) return result;
-        try {
+        if (includeValidateSearch) try {
+          const validated = validateSearch(routeValidateSearch, result);
+          if (meta && validated) {
+            for (const key in validated) if (!(key in result)) (meta.defaulted ||= /* @__PURE__ */ new Map()).set(key, validated[key]);
+          }
           return {
             ...result,
-            ...validateSearch(route.options.validateSearch, result) ?? void 0
+            ...validated
           };
         } catch {
-          return result;
         }
+        return result;
       };
-      context.middlewares.push(validate);
+      middlewares.push(validate);
     }
   }
-  const final = ({ search }) => {
-    const dest = context.dest;
-    if (!dest.search) return {};
-    if (dest.search === true) return search;
-    return functionalUpdate(dest.search, search);
-  };
-  context.middlewares.push(final);
-  const applyNext = (index, currentSearch, middlewares) => {
-    if (index >= middlewares.length) return currentSearch;
-    const middleware = middlewares[index];
-    const next = (newSearch) => {
-      return applyNext(index + 1, newSearch, middlewares);
+  const applyNext = (index, currentSearch, meta) => {
+    if (index >= middlewares.length) {
+      if (!dest.search) return {};
+      if (dest.search === true) return currentSearch;
+      const result = functionalUpdate(dest.search, currentSearch);
+      if (meta) meta.explicit = result;
+      return result;
+    }
+    const next = (newSearch, collectMeta) => {
+      if (collectMeta) {
+        const nextMeta = meta || {};
+        return {
+          search: applyNext(index + 1, newSearch, nextMeta),
+          meta: nextMeta
+        };
+      }
+      return applyNext(index + 1, newSearch, meta);
     };
-    return middleware({
+    return middlewares[index]({
       search: currentSearch,
-      next
+      next,
+      meta
     });
   };
-  return function middleware(search, dest, _includeValidateSearch) {
-    context.dest = dest;
-    context._includeValidateSearch = _includeValidateSearch;
-    return applyNext(0, search, context.middlewares);
+  return function middleware(search, nextDest, _includeValidateSearch) {
+    dest = nextDest;
+    includeValidateSearch = _includeValidateSearch;
+    return applyNext(0, search);
   };
 }
 function findGlobalNotFoundRouteId(notFoundMode, routes) {

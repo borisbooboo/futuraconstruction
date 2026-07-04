@@ -3,7 +3,7 @@ import { R as RealtimeClient } from "./supabase__realtime-js.mjs";
 import { S as StorageClient } from "./supabase__storage-js.mjs";
 import { A as AuthClient } from "./supabase__auth-js.mjs";
 import { F as FunctionsClient } from "./supabase__functions-js.mjs";
-const version = "2.107.0";
+const version = "2.110.0";
 let JS_ENV = "";
 let JS_RUNTIME_VERSION;
 if (typeof Deno !== "undefined") {
@@ -723,9 +723,9 @@ function shouldShowDeprecationWarning() {
   if (processVersion === void 0 || processVersion === null) return false;
   const versionMatch = processVersion.match(/^v(\d+)\./);
   if (!versionMatch) return false;
-  return parseInt(versionMatch[1], 10) <= 18;
+  return parseInt(versionMatch[1], 10) <= 20;
 }
-if (shouldShowDeprecationWarning()) console.warn("⚠️  Node.js 18 and below are deprecated and will no longer be supported in future versions of @supabase/supabase-js. Please upgrade to Node.js 20 or later. For more information, visit: https://github.com/orgs/supabase/discussions/37217");
+if (shouldShowDeprecationWarning()) console.warn("⚠️  Node.js 20 and below are deprecated and will no longer be supported in future versions of @supabase/supabase-js. Please upgrade to Node.js 22 or later. For more information, visit: https://github.com/orgs/supabase/discussions/45715");
 export {
   createClient as c
 };
