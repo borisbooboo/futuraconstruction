@@ -49,10 +49,10 @@ export default {
       return await normalizeCatastrophicSsrResponse(response);
     } catch (error) {
       console.error(error);
-      return new Response(renderErrorPage(), {
-        status: 500,
-        headers: { "content-type": "text/html; charset=utf-8" },
-      });
+      return new Response(body, {
+  status: 500,
+  headers: { "content-type": "text/plain; charset=utf-8" },
+});
     }
   },
 };
