@@ -1,0 +1,1 @@
+import{j as e}from"./index-CUyJ67Kt.js";function n({children:t}){return e.jsxs("div",{className:"inline-flex items-center gap-2 text-accent text-xs font-bold uppercase tracking-[0.2em] mb-3",children:[e.jsx("span",{className:"h-px w-8 bg-accent"}),t]})}export{n as S};
